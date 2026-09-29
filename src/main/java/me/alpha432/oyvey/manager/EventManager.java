@@ -1,22 +1,25 @@
 package me.alpha432.oyvey.manager;
 
-import com.google.common.eventbus.Subscribe;
 import me.alpha432.oyvey.OyVey;
 import me.alpha432.oyvey.event.Stage;
-import me.alpha432.oyvey.event.impl.*;
+import me.alpha432.oyvey.event.impl.entity.DeathEvent;
+import me.alpha432.oyvey.event.impl.entity.player.TickEvent;
+import me.alpha432.oyvey.event.impl.entity.player.UpdateWalkingPlayerEvent;
+import me.alpha432.oyvey.event.impl.input.KeyInputEvent;
+import me.alpha432.oyvey.event.impl.input.MouseInputEvent;
+import me.alpha432.oyvey.event.impl.network.ChatEvent;
+import me.alpha432.oyvey.event.impl.network.PacketEvent;
+import me.alpha432.oyvey.event.impl.render.Render2DEvent;
+import me.alpha432.oyvey.event.impl.render.Render3DEvent;
+import me.alpha432.oyvey.event.system.Subscribe;
 import me.alpha432.oyvey.features.Feature;
-import me.alpha432.oyvey.features.commands.Command;
-import me.alpha432.oyvey.util.models.Timer;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.BrandCustomPayload;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.network.packet.s2c.common.CustomPayloadS2CPacket;
-import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
-import net.minecraft.util.Formatting;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
+import net.minecraft.network.protocol.common.custom.BrandPayload;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
+import net.minecraft.world.entity.player.Player;
 
 public class EventManager extends Feature {
-    private final Timer logoutTimer = new Timer();
-
     public void init() {
         EVENT_BUS.register(this);
     }
@@ -26,55 +29,24 @@ public class EventManager extends Feature {
     }
 
     @Subscribe
-    public void onUpdate(UpdateEvent event) {
-        mc.getWindow().setTitle("OyVey 0.0.3");
-        if (!fullNullCheck()) {
-//            OyVey.inventoryManager.update();
-            OyVey.moduleManager.onUpdate();
-            OyVey.moduleManager.sortModules(true);
-            onTick();
-//            if ((HUD.getInstance()).renderingMode.getValue() == HUD.RenderingMode.Length) {
-//                OyVey.moduleManager.sortModules(true);
-//            } else {
-//                OyVey.moduleManager.sortModulesABC();
-//            }
-        }
-    }
-
-    public void onTick() {
-        if (fullNullCheck())
+    public void onTick(TickEvent.Post event) {
+        if (nullCheck())
             return;
         OyVey.moduleManager.onTick();
-        for (PlayerEntity player : mc.world.getPlayers()) {
+        for (Player player : mc.level.players()) {
             if (player == null || player.getHealth() > 0.0F)
                 continue;
             EVENT_BUS.post(new DeathEvent(player));
-//            PopCounter.getInstance().onDeath(player);
-        }
-    }
-
-    @Subscribe
-    public void onUpdateWalkingPlayer(UpdateWalkingPlayerEvent event) {
-        if (fullNullCheck())
-            return;
-        if (event.getStage() == Stage.PRE) {
-            OyVey.speedManager.updateValues();
-            OyVey.rotationManager.updateRotations();
-            OyVey.positionManager.updatePosition();
-        }
-        if (event.getStage() == Stage.POST) {
-            OyVey.rotationManager.restoreRotations();
-            OyVey.positionManager.restorePosition();
         }
     }
 
     @Subscribe
     public void onPacketReceive(PacketEvent.Receive event) {
         OyVey.serverManager.onPacketReceived();
-        if (event.getPacket() instanceof WorldTimeUpdateS2CPacket)
+        if (event.getPacket() instanceof ClientboundSetTimePacket)
             OyVey.serverManager.update();
-        if (event.getPacket() instanceof CustomPayloadS2CPacket(CustomPayload payload)
-                && payload instanceof BrandCustomPayload(String brand)) {
+        if (event.getPacket() instanceof ClientboundCustomPayloadPacket(CustomPacketPayload payload)
+                && payload instanceof BrandPayload(String brand)) {
             OyVey.serverManager.setServerBrand(brand);
         }
     }
@@ -90,24 +62,24 @@ public class EventManager extends Feature {
     }
 
     @Subscribe
-    public void onKeyInput(KeyEvent event) {
+    public void onKeyInput(KeyInputEvent event) {
         OyVey.moduleManager.onKeyPressed(event.getKey());
     }
 
     @Subscribe
-    public void onChatSent(ChatEvent event) {
-        if (event.getMessage().startsWith(Command.getCommandPrefix())) {
-            event.cancel();
-            try {
-                if (event.getMessage().length() > 1) {
-                    OyVey.commandManager.executeCommand(event.getMessage().substring(Command.getCommandPrefix().length() - 1));
-                } else {
-                    Command.sendMessage("Please enter a command.");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                Command.sendMessage(Formatting.RED + "An error occurred while running this command. Check the log!");
-            }
+    public void onMouseInput(MouseInputEvent event) {
+        if (event.getAction() == 1) {
+            OyVey.moduleManager.onMouseClicked(event.getButton());
         }
+    }
+
+    @Subscribe
+    public void onChatSent(ChatEvent event) {
+        String message = event.getMessage();
+        if (!message.startsWith(OyVey.commandManager.getCommandPrefix())) {
+            return;
+        }
+        event.cancel();
+        OyVey.commandManager.onChatSent(message);
     }
 }

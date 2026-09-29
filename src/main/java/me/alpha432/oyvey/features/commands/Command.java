@@ -1,61 +1,81 @@
 package me.alpha432.oyvey.features.commands;
 
-import me.alpha432.oyvey.OyVey;
+import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import me.alpha432.oyvey.features.Feature;
+import me.alpha432.oyvey.manager.CommandManager;
 import me.alpha432.oyvey.util.TextUtil;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import me.alpha432.oyvey.util.chat.ChatUtil;
+import me.alpha432.oyvey.util.chat.Signature;
 
+import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
+import static me.alpha432.oyvey.features.commands.MessageSignatures.FAIL;
+import static me.alpha432.oyvey.features.commands.MessageSignatures.SUCCESS;
 
-public abstract class Command
-        extends Feature {
-    protected String name;
-    protected String[] commands;
+public abstract class Command extends Feature {
+    public static final int NO_OP = -1;
+    public static final int SINGLE_FAILURE = 0;
 
-    public Command(String name) {
-        super(name);
-        this.name = name;
-        this.commands = new String[]{""};
+    private final String[] aliases;
+    private String description = "No description was provided for this command.";
+
+    public Command(String... aliases) {
+        super(aliases[0]);
+        this.aliases = aliases;
     }
 
-    public Command(String name, String[] commands) {
-        super(name);
-        this.name = name;
-        this.commands = commands;
+    public abstract void createArgumentBuilder(LiteralArgumentBuilder<CommandManager> builder);
+
+    protected int success(String message, Object... format) {
+        sendMessage(message, SUCCESS, format);
+        return NO_OP;
     }
 
-    public static void sendMessage(String message, Object... obj) {
-        sendMessage(TextUtil.text(message, obj));
+    protected int success() {
+        return SINGLE_SUCCESS;
     }
 
-    public static void sendMessage(Text message) {
-        MutableText text = Text.empty();
-        text.append(OyVey.commandManager.getClientMessage() + " " + Formatting.GRAY);
-        text.append(message);
-        Command.sendSilentMessage(text);
+    protected int fail(String message, Object... format) {
+        sendMessage("{red} " + message, FAIL, format);
+        return NO_OP;
     }
 
-    public static void sendSilentMessage(Text message) {
-        if (Command.nullCheck()) {
-            return;
-        }
-        // TODO add silent support ig
-        mc.inGameHud.getChatHud().addMessage(message);
+    protected int fail() {
+        return SINGLE_FAILURE;
     }
 
-    public static String getCommandPrefix() {
-        return OyVey.commandManager.getPrefix();
+    public String[] getAliases() {
+        return aliases;
     }
 
-    public abstract void execute(String[] var1);
-
-    @Override
-    public String getName() {
-        return this.name;
+    protected void setDescription(String description) {
+        this.description = description;
     }
 
-    public String[] getCommands() {
-        return this.commands;
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isShown() {
+        return true;
+    }
+
+    public static void sendMessage(String message, Signature identifier) {
+        if (message == null) return;
+        ChatUtil.sendMessage(TextUtil.text(message), identifier);
+    }
+
+    public static void sendMessage(String message, Signature identifier, Object... format) {
+        if (message == null) return;
+        ChatUtil.sendMessage(TextUtil.text(message, format), identifier);
+    }
+
+    public static LiteralArgumentBuilder<CommandManager> literal(String literal) {
+        return LiteralArgumentBuilder.literal(literal);
+    }
+
+    public static <T> RequiredArgumentBuilder<CommandManager, T> argument(String name, ArgumentType<T> type) {
+        return RequiredArgumentBuilder.argument(name, type);
     }
 }

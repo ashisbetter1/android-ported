@@ -3,8 +3,9 @@ package me.alpha432.oyvey.manager;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import me.alpha432.oyvey.OyVey;
 import me.alpha432.oyvey.util.traits.Jsonable;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,12 +13,16 @@ import java.util.List;
 public class FriendManager implements Jsonable {
     private final List<String> friends = new ArrayList<>();
 
+    public void init() {
+        OyVey.configManager.addConfig(this);
+    }
+
     public boolean isFriend(String name) {
         return this.friends.stream().anyMatch(friend -> friend.equalsIgnoreCase(name));
     }
 
-    public boolean isFriend(PlayerEntity player) {
-        return this.isFriend(player.getGameProfile().getName());
+    public boolean isFriend(Player player) {
+        return this.isFriend(player.getGameProfile().name());
     }
 
     public void addFriend(String name) {

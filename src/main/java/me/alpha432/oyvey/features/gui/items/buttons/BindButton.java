@@ -2,15 +2,15 @@ package me.alpha432.oyvey.features.gui.items.buttons;
 
 import me.alpha432.oyvey.OyVey;
 import me.alpha432.oyvey.features.gui.OyVeyGui;
-import me.alpha432.oyvey.features.modules.client.ClickGui;
+import me.alpha432.oyvey.features.modules.client.ClickGuiModule;
 import me.alpha432.oyvey.features.settings.Bind;
 import me.alpha432.oyvey.features.settings.Setting;
-import me.alpha432.oyvey.util.ColorUtil;
+import me.alpha432.oyvey.util.KeyboardUtil;
 import me.alpha432.oyvey.util.render.RenderUtil;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvents;
 import org.lwjgl.glfw.GLFW;
 
 public class BindButton
@@ -25,15 +25,14 @@ public class BindButton
     }
 
     @Override
-    public void drawScreen(DrawContext context, int mouseX, int mouseY, float partialTicks) {
-        int color = ClickGui.getInstance().color.getValue().getRGB();
-        RenderUtil.rect(context.getMatrices(), this.x, this.y, this.x + (float) this.width + 7.4f, this.y + (float) this.height - 0.5f, this.getState() ? (!this.isHovering(mouseX, mouseY) ? 0x11555555 : -2007673515) : (!this.isHovering(mouseX, mouseY) ? OyVey.colorManager.getColorWithAlpha(ClickGui.getInstance().color.getValue().getAlpha()) : OyVey.colorManager.getColorWithAlpha(ClickGui.getInstance().topColor.getValue().getAlpha())));
+    public void drawScreen(GuiGraphics context, int mouseX, int mouseY, float partialTicks) {
+        int color = ClickGuiModule.getInstance().color.getValue().getRGB();
+        RenderUtil.rect(context, this.x, this.y, this.x + (float) this.width + 7.4f, this.y + (float) this.height - 0.5f, this.getState() ? (!this.isHovering(mouseX, mouseY) ? 0x11555555 : -2007673515) : (!this.isHovering(mouseX, mouseY) ? OyVey.colorManager.getColorWithAlpha(y, ClickGuiModule.getInstance().color.getValue().getAlpha()) : OyVey.colorManager.getColorWithAlpha(y, ClickGuiModule.getInstance().topColor.getValue().getAlpha())));
         if (this.isListening) {
             drawString("Press a Key...", this.x + 2.3f, this.y - 1.7f - (float) OyVeyGui.getClickGui().getTextOffset(), -1);
         } else {
-            String str = this.setting.getValue().toString().toUpperCase();
-            str = str.replace("KEY.KEYBOARD", "").replace(".", " ");
-            drawString(this.setting.getName() + " " + Formatting.GRAY + str, this.x + 2.3f, this.y - 1.7f - (float) OyVeyGui.getClickGui().getTextOffset(), this.getState() ? -1 : -5592406);
+            String str = KeyboardUtil.getKeyName(setting.getValue());
+            drawString(this.setting.getName() + " " + ChatFormatting.GRAY + str, this.x + 2.3f, this.y - 1.7f - (float) OyVeyGui.getClickGui().getTextOffset(), this.getState() ? -1 : -5592406);
         }
     }
 
@@ -45,8 +44,13 @@ public class BindButton
     @Override
     public void mouseClicked(int mouseX, int mouseY, int mouseButton) {
         super.mouseClicked(mouseX, mouseY, mouseButton);
-        if (this.isHovering(mouseX, mouseY)) {
-            mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1f));
+        if (this.isListening) {
+            if (mouseButton != 0 && mouseButton != 1) {
+                this.setting.setValue(new Bind(-mouseButton - 2));
+                this.onMouseClick();
+            }
+        } else if (this.isHovering(mouseX, mouseY)) {
+            mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1f));
         }
     }
 
@@ -62,11 +66,6 @@ public class BindButton
             this.setting.setValue(bind);
             this.onMouseClick();
         }
-    }
-
-    @Override
-    public int getHeight() {
-        return 14;
     }
 
     @Override

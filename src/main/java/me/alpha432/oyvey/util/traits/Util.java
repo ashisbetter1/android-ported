@@ -1,9 +1,13 @@
 package me.alpha432.oyvey.util.traits;
 
-import com.google.common.eventbus.EventBus;
-import net.minecraft.client.MinecraftClient;
+import me.alpha432.oyvey.event.system.EventBus;
+import net.minecraft.client.Minecraft;
 
 public interface Util {
-    MinecraftClient mc = MinecraftClient.getInstance();
+    Minecraft mc = Minecraft.getInstance();
     EventBus EVENT_BUS = new EventBus();
+
+    static boolean isLocalPlayer(Object o) {
+        return o == mc.player;
+    }
 }

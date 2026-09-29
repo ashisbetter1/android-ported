@@ -4,6 +4,7 @@ import me.alpha432.oyvey.event.impl.ClientEvent;
 import me.alpha432.oyvey.features.Feature;
 import org.joml.Vector2f;
 
+import java.awt.*;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -176,6 +177,7 @@ public class Setting<T> {
         return -1;
     }
 
+    @SuppressWarnings("unchecked")
     public void setEnumValue(String value) {
         for (Enum<?> e : ((Enum<?>) this.value).getClass().getEnumConstants()) {
             if (!e.name().equalsIgnoreCase(value)) continue;
@@ -191,8 +193,9 @@ public class Setting<T> {
         return EnumConverter.currentEnum((Enum<?>) this.value);
     }
 
+    @SuppressWarnings("unchecked")
     public void increaseEnum() {
-        this.plannedValue = (T) EnumConverter.increaseEnum((Enum) this.value);
+        this.plannedValue = (T) EnumConverter.increaseEnum((Enum<?>) this.value);
         ClientEvent event = new ClientEvent(this);
         EVENT_BUS.post(event);
         if (!event.isCancelled()) {
@@ -202,8 +205,9 @@ public class Setting<T> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public void increaseEnumNoEvent() {
-        this.value = (T) EnumConverter.increaseEnum((Enum) this.value);
+        this.value = (T) EnumConverter.increaseEnum((Enum<?>) this.value);
     }
 
     public String getType() {
@@ -252,6 +256,9 @@ public class Setting<T> {
     }
 
     public String getValueAsString() {
+        if (value instanceof Color color) {
+            return "%d, %d, %d".formatted(color.getRed(), color.getGreen(), color.getBlue());
+        }
         return this.value.toString();
     }
 

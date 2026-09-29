@@ -5,54 +5,54 @@ import me.alpha432.oyvey.features.Feature;
 import me.alpha432.oyvey.features.gui.items.buttons.ModuleButton;
 import me.alpha432.oyvey.features.modules.Module;
 import me.alpha432.oyvey.features.modules.client.HudModule;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 
 public class HudEditorScreen extends Screen {
-    private final ArrayList<Component> components = new ArrayList<>();
+    private static HudEditorScreen INSTANCE;
+
+    private final ArrayList<Widget> components = new ArrayList<>();
     public HudModule currentDragging;
     public boolean anyHover;
 
-    public HudEditorScreen() {
-        super(Text.literal("oyvey-hudeditor"));
+    private HudEditorScreen() {
+        super(Component.literal("oyvey-hudeditor"));
         load();
     }
 
     private void load() {
-        this.components.add(new Component("Hud", 50, 50, true) {
-            @Override
-            public void setupItems() {
-                Component.counter1 = new int[]{1};
-                OyVey.moduleManager.getModulesByCategory(Module.Category.HUD).forEach(module -> {
-                    if (!module.hidden) {
-                        this.addButton(new ModuleButton(module));
-                    }
-                });
-            }
-        });
+        Widget hud = new Widget("Hud", 50, 50, true);
+        OyVey.moduleManager.stream()
+                .filter(m -> m.getCategory() == Module.Category.HUD && !m.hidden)
+                .map(ModuleButton::new)
+                .forEach(hud::addButton);
+        this.components.add(hud);
         this.components.forEach(component -> component.getItems().sort(Comparator.comparing(Feature::getName)));
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         anyHover = false;
         this.components.forEach(component -> component.drawScreen(context, mouseX, mouseY, delta));
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int clickedButton) {
-        this.components.forEach(component -> component.mouseClicked((int) mouseX, (int) mouseY, clickedButton));
-        return super.mouseClicked(mouseX, mouseY, clickedButton);
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
+        this.components.forEach(component -> component.mouseClicked((int) click.x(), (int) click.y(), click.button()));
+        return super.mouseClicked(click, doubled);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int releaseButton) {
-        this.components.forEach(component -> component.mouseReleased((int) mouseX, (int) mouseY, releaseButton));
-        return super.mouseReleased(mouseX, mouseY, releaseButton);
+    public boolean mouseReleased(MouseButtonEvent click) {
+        this.components.forEach(component -> component.mouseReleased((int) click.x(), (int) click.y(), click.button()));
+        return super.mouseReleased(click);
     }
 
     @Override
@@ -66,24 +66,35 @@ public class HudEditorScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        this.components.forEach(component -> component.onKeyPressed(keyCode));
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyEvent input) {
+        this.components.forEach(component -> component.onKeyPressed(input.input()));
+        return super.keyPressed(input);
     }
 
     @Override
-    public boolean charTyped(char chr, int modifiers) {
-        this.components.forEach(component -> component.onKeyTyped(chr, modifiers));
-        return super.charTyped(chr, modifiers);
+    public boolean charTyped(CharacterEvent input) {
+        this.components.forEach(component -> component.onKeyTyped(input.codepointAsString(), input.modifiers()));
+        return super.charTyped(input);
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
-    public ArrayList<Component> getComponents() {
+    @Override // ignore 1.21.8 menu blur thing
+    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    }
+
+    public ArrayList<Widget> getComponents() {
         return components;
+    }
+
+    public static HudEditorScreen getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new HudEditorScreen();
+        }
+        return INSTANCE;
     }
 }
 

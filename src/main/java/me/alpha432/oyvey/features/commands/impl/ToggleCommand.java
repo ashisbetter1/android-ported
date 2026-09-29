@@ -1,29 +1,30 @@
 package me.alpha432.oyvey.features.commands.impl;
 
-import me.alpha432.oyvey.OyVey;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import me.alpha432.oyvey.features.commands.Command;
 import me.alpha432.oyvey.features.modules.Module;
+import me.alpha432.oyvey.manager.CommandManager;
+
+import static me.alpha432.oyvey.features.commands.argument.ModuleArgumentType.getModule;
+import static me.alpha432.oyvey.features.commands.argument.ModuleArgumentType.module;
 
 public class ToggleCommand extends Command {
     public ToggleCommand() {
-        super("toggle", new String[]{"<module>"});
+        super("toggle", "t");
+        setDescription("Toggles a module");
     }
 
     @Override
-    public void execute(String[] var1) {
-        if (var1.length < 1 || var1[0] == null) {
-            notFound();
-            return;
-        }
-        Module mod = OyVey.moduleManager.getModuleByName(var1[0]);
-        if (mod == null) {
-            notFound();
-            return;
-        }
-        mod.toggle();
-    }
-
-    private void notFound() {
-        sendMessage("Module is not found.");
+    public void createArgumentBuilder(LiteralArgumentBuilder<CommandManager> builder) {
+        builder.then(argument("module", module(true))
+                .executes((ctx) -> {
+                    Module module = getModule(ctx, "module");
+                    module.toggle();
+                    boolean toggled = module.isEnabled();
+                    return success("{gray} %s {reset} is now %s %s",
+                            module.getDisplayName(),
+                            toggled ? "{green}" : "{red}",
+                            toggled ? "enabled" : "disabled");
+                }));
     }
 }
